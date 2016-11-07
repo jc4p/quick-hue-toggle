@@ -44,6 +44,8 @@ dependencies {
     annotationProcessor 'com.google.dagger:dagger-compiler:2.5'
     provided 'javax.annotation:jsr250-api:1.0'
 
+    compile 'com.facebook.rebound:rebound:0.3.8'
+
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })

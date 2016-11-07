@@ -4,14 +4,10 @@ package com.kasra.quickhuetoggle.core;
 import com.kasra.quickhuetoggle.MainActivity;
 import com.kasra.quickhuetoggle.core.api.HueApiModule;
 
-import dagger.Subcomponent;
+import retrofit2.Retrofit;
 
 @BridgeScope
-@Subcomponent(
-    modules = {
-            HueApiModule.class
-    }
-)
+@dagger.Subcomponent(modules = { HueApiModule.class })
 public interface BridgeComponent {
-    void inject(MainActivity activity);
+    Retrofit retrofit();
 }

@@ -1,6 +1,7 @@
 package com.kasra.quickhuetoggle.core.api;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.kasra.quickhuetoggle.core.BridgeScope;
 
 import dagger.Module;

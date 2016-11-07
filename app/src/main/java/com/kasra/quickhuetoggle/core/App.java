@@ -15,6 +15,6 @@ public class App extends Application {
     }
 
     public void createBridgeComponent(String host) {
-        bridgeComponent = component.bridgeComponent(new HueApiModule(host));
+        bridgeComponent = App.component.bridgeComponent(new HueApiModule(host));
     }
 }

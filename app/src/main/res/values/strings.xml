@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">QuickHueToggle</string>
+    <string name="hue_user_devicetype">quick-hue-toggle</string>
+    <string name="searching_for_bridge">Searching for your Hue bridge…</string>
+    <string name="press_link_then_tap">Press your Hue bridge\'s link button, then tap to continue.</string>
+    <string name="setup_instructions_explain">To allow access to your Hue lights:</string>
+    <string name="setup_user_create_error">Error: %1$s</string>
 </resources>
