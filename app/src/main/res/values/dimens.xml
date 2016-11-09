@@ -6,4 +6,14 @@
     <dimen name="setup_icon_size">108dp</dimen>
     <dimen name="setup_icon_padding_max">30dp</dimen>
     <dimen name="setup_icon_padding_min">0dp</dimen>
+
+    <dimen name="action_button_text_size">14sp</dimen>
+    <dimen name="action_button_min_width">120dp</dimen>
+    <dimen name="action_button_min_height">48dp</dimen>
+
+    <dimen name="light_brightness_seekbar_min_width">380dp</dimen>
+
+    <dimen name="small_padding">8dp</dimen>
+
+    <dimen name="large_text_size">18sp</dimen>
 </resources>

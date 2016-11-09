@@ -3,6 +3,7 @@ package com.kasra.quickhuetoggle.core.api;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.kasra.quickhuetoggle.core.BridgeScope;
+import com.kasra.quickhuetoggle.core.services.HueApiService;
 
 import dagger.Module;
 import dagger.Provides;
@@ -29,5 +30,10 @@ public class HueApiModule {
                 .client(client)
                 .build();
         return retrofit;
+    }
+
+    @Provides @BridgeScope
+    HueApiService provideHueApi(Retrofit retrofit) {
+        return retrofit.create(HueApiService.class);
     }
 }

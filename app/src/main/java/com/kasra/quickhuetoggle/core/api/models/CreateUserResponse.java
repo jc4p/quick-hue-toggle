@@ -7,7 +7,6 @@ public class CreateUserResponse extends HueApiWrapper {
         return success.username;
     }
 
-
     public class SuccessResponse {
         public String username;
     }

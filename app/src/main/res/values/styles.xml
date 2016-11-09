@@ -2,7 +2,23 @@
 
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
+        <item name="colorPrimaryDark">#455A64</item>
+        <item name="colorPrimary">#607D8B</item>
+        <item name="colorAccent">#536DFE</item>
+        <item name="android:textColorPrimary">#212121</item>
+        <item name="android:textColorSecondary">#757575</item>
     </style>
 
+    <style name="ActionButton" parent="Widget.AppCompat.Button">
+        <item name="android:fontFamily">sans-serif-condensed</item>
+        <item name="android:textSize">@dimen/action_button_text_size</item>
+
+        <item name="android:minWidth">@dimen/action_button_min_width</item>
+        <item name="android:minHeight">@dimen/action_button_min_height</item>
+    </style>
+
+    <style name="LargeText">
+        <item name="android:fontFamily">sans-serif-condensed-medium</item>
+        <item name="android:textSize">@dimen/large_text_size</item>
+    </style>
 </resources>

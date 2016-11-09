@@ -1,169 +1,146 @@
 package com.kasra.quickhuetoggle;
 
-import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.design.widget.Snackbar;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
-import android.widget.ImageView;
-import android.widget.TextView;
 
-import com.facebook.rebound.BaseSpringSystem;
-import com.facebook.rebound.SimpleSpringListener;
-import com.facebook.rebound.Spring;
-import com.facebook.rebound.SpringConfig;
-import com.facebook.rebound.SpringSystem;
-import com.facebook.rebound.SpringUtil;
-import com.google.gson.Gson;
 import com.kasra.quickhuetoggle.core.App;
+import com.kasra.quickhuetoggle.core.Utils;
+import com.kasra.quickhuetoggle.core.api.models.AllLightsResponse;
+import com.kasra.quickhuetoggle.core.api.models.LightResponse;
 import com.kasra.quickhuetoggle.core.services.HueApiService;
-import com.kasra.quickhuetoggle.core.services.SsdpSearchService;
+import com.kasra.quickhuetoggle.core.services.PrefsService;
+import com.kasra.quickhuetoggle.ui.LightsAdapter;
+import com.kasra.quickhuetoggle.ui.models.Light;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.xml.validation.Schema;
 
-import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
-import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
-import retrofit2.converter.gson.GsonConverterFactory;
-import rx.Observable;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
-import rx.subjects.PublishSubject;
 
 public class MainActivity extends AppCompatActivity {
+    @Inject PrefsService prefs;
+    @Inject HueApiService api;
 
-    private View searchingView;
-    private View instructionsView;
-    private ImageView instructionsImage;
-    private TextView instructionsLabel;
+    private View loadingView;
+    private RecyclerView recyclerView;
 
-    private final BaseSpringSystem springSystem = SpringSystem.create();
-    private final IconScaleSpringListener springListener = new IconScaleSpringListener();
-    private Spring scaleSpring;
-    private int imageScalePaddingMin;
-    private int imageScalePaddingMax;
+    private LightsAdapter adapter;
 
-    @Inject SsdpSearchService ssdpSearchService;
-    @Inject Gson gson;
-    @Inject OkHttpClient httpClient;
-    private HueApiService hueApi;
-
-    @Inject SharedPreferences sharedPrefs;
-
-    private PublishSubject<String> hueDiscoverySubject = PublishSubject.create();
+    private ArrayList<Light> lights;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        searchingView = findViewById(R.id.activity_main_searching);
-        instructionsView = findViewById(R.id.activity_main_instructions);
-        instructionsImage = (ImageView) findViewById(R.id.activity_main_instructions_image);
-        instructionsLabel = (TextView) findViewById(R.id.activity_main_instructions_label);
 
-        App.component.inject(this);
+        App app = (App)getApplication();
 
-        scaleSpring = springSystem.createSpring();
+        if (!app.isUserLoggedIn()) {
+            Utils.log("MainActivity - NO user!!!");
+            finish();
+        }
 
-        SpringConfig springConfig = new SpringConfig(20, 6);
-        scaleSpring.setSpringConfig(springConfig);
-        scaleSpring.setOvershootClampingEnabled(true);
+        app.createBridgeComponent(app.getLoggedInBridgeIp());
+        App.bridgeComponent.inject(this);
 
-        imageScalePaddingMin = getResources().getDimensionPixelSize(R.dimen.setup_icon_padding_min);
-        imageScalePaddingMax = getResources().getDimensionPixelSize(R.dimen.setup_icon_padding_max);
+        loadingView = findViewById(R.id.activity_main_loading);
+        recyclerView = (RecyclerView)findViewById(R.id.activity_main_recyclerview);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        //hueDiscoverySubject.asObservable()
-        Observable.just("192.168.1.111")
-                .delay(1, TimeUnit.SECONDS)
+        lights = new ArrayList<>();
+
+        checkBridge();
+        getLights();
+    }
+
+    private void checkBridge() {
+        // idk, maybe check the bridge for a minimum supported API version?
+        /*
+        api.getConfig(prefs.getApiUsername())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(s -> {
-                    setupApi(s);
-                    searchingView.setVisibility(View.GONE);
-                    instructionsView.setVisibility(View.VISIBLE);
-
-                    // #TODO... Clean this up
-                    instructionsLabel.setText(getText(R.string.setup_instructions_explain));
-                    instructionsLabel.append("\n" + getText(R.string.press_link_then_tap));
-
-                    scaleSpring.setEndValue(1);
-
-                    instructionsView.setOnClickListener(view -> {
-                        attemptUserCreate(s);
-                    });
-                });
-
-//        ssdpSearchService.start(getApplicationContext(), hueDiscoverySubject);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        scaleSpring.addListener(springListener);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        scaleSpring.removeListener(springListener);
-    }
-
-    private void setupApi(String host) {
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("http://" + host + "/")
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
-                .client(httpClient)
-                .build();
-        hueApi  = retrofit.create(HueApiService.class);
-    }
-
-    private void attemptUserCreate(String host) {
-        HashMap<String, String> params = new HashMap<>();
-        params.put("devicetype", getString(R.string.hue_user_devicetype));
-        hueApi.createUser(params)
                 .subscribeOn(Schedulers.io())
                 .onErrorReturn(throwable -> {
-                    Log.e("KasraTest", "Error: " + throwable.getMessage());
-                    Log.e("KasraTest", Log.getStackTraceString(throwable));
+                    Utils.log("Error: " + throwable.getMessage());
+                    Utils.log(Log.getStackTraceString(throwable));
+                    return null;
+                })
+                .subscribe(c -> {
+                    if (c == null) {
+                        return;
+                    }
+
+                    Utils.log("idk");
+                });
+        */
+    }
+
+    private void getLights() {
+        api.getLights(prefs.getApiUsername())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeOn(Schedulers.io())
+                .onErrorReturn(throwable -> {
+                    Utils.log("Error: " + throwable.getMessage());
+                    Utils.log(Log.getStackTraceString(throwable));
                     return null;
                 })
                 .subscribe(res -> {
-                    if (res == null) { return; }
+                    if (res == null) {
+                        return;
+                    }
 
-                    if (res.get(0).isSuccess()) {
-                        Snackbar.make(instructionsView, "Connected to Hue bridge", Snackbar.LENGTH_LONG).show();
-                        Log.e("KasraTest", "Registered user: " + res.get(0).get());
-                        sharedPrefs.edit()
-                                .putString("username", res.get(0).get())
-                                .putString("host", host)
-                                .apply();
-                    }
-                    else {
-                        String errorMessage = getString(R.string.setup_user_create_error, res.get(0).getErrrorMessage());
-                        Snackbar.make(instructionsView, errorMessage, Snackbar.LENGTH_LONG).show();
-                        Log.e("KasraTest", "Error: " + res.get(0).getErrrorMessage());
-                    }
+                    lights.addAll(res.entrySet().stream()
+                            .map(r -> Light.fromLightResponse(r.getKey(), r.getValue()))
+                            .collect(Collectors.toList())
+                            );
+
+                    setupLights();
+                    showUi();
                 });
-
     }
 
-    private class IconScaleSpringListener extends SimpleSpringListener {
-        @Override
-        public void onSpringUpdate(Spring spring) {
-            int padding = (int)Math.floor(imageScalePaddingMin +
-                    (spring.getCurrentValue() * (imageScalePaddingMax - imageScalePaddingMin)));
-            instructionsImage.setPadding(padding, padding, padding, padding);
+    private void setupLights() {
+        adapter = new LightsAdapter(lights);
+        recyclerView.setAdapter(adapter);
+        adapter.getLightChanges()
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .subscribe(p -> {
+                    HashMap<String, Object> params = new HashMap<>();
+                    params.put("bri", p.second);
+                    params.put("transitiontime", 0);
 
-            if (spring.getCurrentValue() == spring.getEndValue()) {
-                spring.setEndValue(spring.getCurrentValue() == 1 ? 0 : 1);
-            }
-        }
+                    if (p.second == 0)
+                        params.put("on", false);
+                    else if (!p.first.on) {
+                        params.put("on", true);
+                        p.first.on = true;
+                    }
+
+                    api.setBrightness(p.first.id, prefs.getApiUsername(), params)
+                            .subscribeOn(Schedulers.io())
+                            .onErrorReturn(throwable -> {
+                                Utils.log("Error: " + throwable.getMessage());
+                                Utils.log(Log.getStackTraceString(throwable));
+                                return null;
+                            })
+                            .subscribe(v -> { });
+                });
     }
 
-
+    private void showUi() {
+        loadingView.setVisibility(View.GONE);
+        recyclerView.setVisibility(View.VISIBLE);
+    }
 }

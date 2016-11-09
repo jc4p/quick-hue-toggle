@@ -1,10 +1,11 @@
 package com.kasra.quickhuetoggle.core;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-
+import com.facebook.stetho.okhttp3.StethoInterceptor;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.kasra.quickhuetoggle.core.api.models.AllLightsResponse;
+import com.kasra.quickhuetoggle.core.api.models.LightResponse;
+import com.kasra.quickhuetoggle.core.services.PrefsService;
 
 import javax.inject.Singleton;
 
@@ -29,19 +30,22 @@ public class AppModule {
     @Provides
     Gson provideGson() {
         GsonBuilder gsonBuilder = new GsonBuilder();
-        // #TODO: we probably have some field naming policies to set here
+        gsonBuilder.registerTypeAdapter(AllLightsResponse.class,
+                new Utils.DictionaryOfItemsDeserializer<>(LightResponse.class, AllLightsResponse.class));
         return gsonBuilder.create();
     }
 
     @Provides
     @Singleton
     OkHttpClient provideOkHttpClient() {
-        return new OkHttpClient.Builder().build();
+        return new OkHttpClient.Builder()
+                .addNetworkInterceptor(new StethoInterceptor())
+                .build();
     }
 
     @Provides
     @Singleton
-    SharedPreferences provideSharedPrefs(App app) {
-        return app.getSharedPreferences("prefs", Context.MODE_PRIVATE);
+    PrefsService providePrefsService(App app) {
+        return new PrefsService(app);
     }
 }
